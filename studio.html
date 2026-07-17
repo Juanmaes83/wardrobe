@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fashion Studio SOL — Ontología y Outfits</title>
+  <style>
+    :root { --bg:#f4f1ea; --card:#fffdf8; --ink:#191713; --muted:#7a746a; --line:#e2dccf;
+            --accent:#b08d4f; --ok:#4a7c59; --warn:#c2803d; --bad:#9c3d2e; --serif:Georgia,"Times New Roman",serif; }
+    * { box-sizing:border-box; margin:0; }
+    body { background:var(--bg); color:var(--ink); font:15px/1.5 "Segoe UI",system-ui,sans-serif; }
+    header { position:sticky; top:0; z-index:10; background:var(--card); border-bottom:1px solid var(--line);
+             display:flex; align-items:center; gap:18px; padding:12px 22px; }
+    header h1 { font:500 1.15rem var(--serif); letter-spacing:.06em; }
+    header small { color:var(--muted); }
+    .tabs { display:flex; gap:6px; margin-left:auto; }
+    .tab { border:1px solid var(--line); background:none; padding:7px 16px; border-radius:999px;
+           font:inherit; font-size:.8rem; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; }
+    .tab.on { background:var(--ink); color:var(--card); border-color:var(--ink); }
+    main { max-width:1280px; margin:0 auto; padding:24px 22px 80px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:16px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden;
+            cursor:pointer; transition:box-shadow .15s; }
+    .card:hover { box-shadow:0 10px 30px rgba(25,23,19,.12); }
+    .card img { width:100%; aspect-ratio:1; object-fit:contain; background:#fff; display:block; }
+    .card .body { padding:10px 12px 12px; display:grid; gap:4px; }
+    .card .name { font:500 1.02rem var(--serif); }
+    .chips { display:flex; flex-wrap:wrap; gap:4px; }
+    .chip { font-size:.62rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted);
+            border:1px solid var(--line); border-radius:999px; padding:2px 8px; }
+    .badge { font-size:.62rem; letter-spacing:.12em; text-transform:uppercase; padding:3px 10px; border-radius:999px; color:#fff; }
+    .badge.draft{background:var(--muted)} .badge.review{background:var(--warn)}
+    .badge.approved{background:var(--ok)} .badge.rejected{background:var(--bad)} .badge.published{background:var(--accent)}
+    .toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:18px; }
+    .toolbar .spacer { flex:1; }
+    select,input,textarea,button { font:inherit; }
+    select,input[type=text],input[type=number],textarea {
+      border:1px solid var(--line); border-radius:8px; background:#fff; padding:7px 10px; width:100%; }
+    label { display:grid; gap:4px; font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+    label .prov { display:inline-block; width:8px; height:8px; border-radius:50%; margin-left:5px; vertical-align:middle; }
+    .prov.ai_inferred{background:var(--warn)} .prov.human_confirmed{background:var(--ok)} .prov.unknown{background:#bbb}
+    .btn { border:1px solid var(--ink); background:var(--ink); color:var(--card); border-radius:999px;
+           padding:8px 18px; font-size:.78rem; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; }
+    .btn.ghost { background:none; color:var(--ink); }
+    .btn.ok{background:var(--ok);border-color:var(--ok)} .btn.bad{background:var(--bad);border-color:var(--bad)}
+    .btn[disabled]{opacity:.4;cursor:not-allowed}
+    dialog { border:1px solid var(--line); border-radius:16px; padding:0; width:min(880px,94vw); max-height:92vh; }
+    dialog::backdrop { background:rgba(25,23,19,.45); }
+    .sheet { display:grid; grid-template-columns:300px 1fr; }
+    .sheet .visual { background:#fff; border-right:1px solid var(--line); padding:16px; display:grid; gap:10px; align-content:start; }
+    .sheet .visual img { width:100%; aspect-ratio:1; object-fit:contain; border:1px solid var(--line); border-radius:10px; }
+    .sheet form,.sheet .detail { padding:18px 20px 20px; display:grid; gap:12px; overflow:auto; max-height:88vh; }
+    .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .row3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+    .checks { display:flex; flex-wrap:wrap; gap:6px; }
+    .checks label { flex-direction:row; display:flex; align-items:center; gap:4px; text-transform:none;
+                    font-size:.78rem; letter-spacing:0; border:1px solid var(--line); border-radius:999px; padding:3px 10px; }
+    .sheet-head { display:flex; align-items:center; gap:10px; }
+    .sheet-head h2 { font:500 1.3rem var(--serif); flex:1; }
+    .muted { color:var(--muted); font-size:.8rem; }
+    .glist { display:grid; gap:6px; }
+    .glist .g { display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:10px; padding:6px 10px; }
+    .glist img { width:36px; height:36px; object-fit:contain; }
+    .glist .cat { font-size:.62rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); width:110px; }
+    .toast { position:fixed; bottom:22px; left:50%; transform:translateX(-50%); background:var(--ink);
+             color:var(--card); padding:10px 22px; border-radius:999px; font-size:.85rem; z-index:99; }
+    [hidden]{display:none!important}
+    .legend { font-size:.72rem; color:var(--muted); display:flex; gap:14px; align-items:center; }
+    @media (max-width:760px){ .sheet{grid-template-columns:1fr} .sheet .visual{border-right:0;border-bottom:1px solid var(--line)} }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Fashion Studio SOL</h1>
+  <small>Ontología V1 · Outfit Layer · datos reales de Wardrobe</small>
+  <nav class="tabs">
+    <button class="tab on" data-tab="garments">Prendas</button>
+    <button class="tab" data-tab="outfits">Outfits</button>
+    <a class="tab" href="/" style="text-decoration:none">Galería ↗</a>
+  </nav>
+</header>
+<main>
+  <section id="view-garments">
+    <div class="toolbar">
+      <label style="width:200px">Categoría<select id="f-category"><option value="">Todas</option></select></label>
+      <label style="width:180px">Slot<select id="f-area"><option value="">Todos</option></select></label>
+      <label style="width:180px">Temporada<select id="f-season"><option value="">Todas</option></select></label>
+      <span class="spacer"></span>
+      <span class="legend"><span><span class="prov ai_inferred" style="display:inline-block;width:8px;height:8px;border-radius:50%"></span> inferido por IA</span>
+      <span><span class="prov human_confirmed" style="display:inline-block;width:8px;height:8px;border-radius:50%"></span> confirmado</span></span>
+    </div>
+    <div class="grid" id="garment-grid"></div>
+  </section>
+
+  <section id="view-outfits" hidden>
+    <div class="toolbar">
+      <label style="width:180px">Estado<select id="f-status"><option value="">Todos</option></select></label>
+      <span class="spacer"></span>
+      <button class="btn ghost" id="btn-import">Importar manifest</button>
+      <button class="btn" id="btn-new">Nuevo outfit</button>
+    </div>
+    <div class="grid" id="outfit-grid"></div>
+  </section>
+</main>
+
+<dialog id="dlg"></dialog>
+<div class="toast" id="toast" hidden></div>
+
+<script type="module">
+const $ = s => document.querySelector(s);
+let ONT = null, LIB = [], OUTFITS = [];
+const api = async (url, opts) => {
+  const r = await fetch(url, opts ? { headers: { "content-type": "application/json" }, ...opts } : undefined);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.errors?.join(" · ") || d.error || r.status);
+  return d;
+};
+let toastT;
+const toast = m => { const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3200); };
+const imgUrl = g => g.image;
+const areaLabel = a => ONT.bodyArea.labels[a] || a;
+const catLabel = c => ONT.category.labels[c] || c || "—";
+const byId = id => LIB.find(g => g.id === id);
+
+/* ---------- carga ---------- */
+async function loadAll() {
+  [ONT, LIB] = await Promise.all([api("/api/studio/ontology"), api("/api/import/wardrobe")]);
+  OUTFITS = (await api("/api/studio/outfits")).outfits;
+  fillFilters(); renderGarments(); renderOutfits();
+}
+function opt(sel, values, labels) {
+  values.forEach(v => { const o = document.createElement("option"); o.value = v; o.textContent = labels?.[v] || v; sel.appendChild(o); });
+}
+function fillFilters() {
+  opt($("#f-category"), ONT.category.values, ONT.category.labels);
+  opt($("#f-area"), ONT.bodyArea.values, ONT.bodyArea.labels);
+  opt($("#f-season"), ONT.season.values);
+  opt($("#f-status"), ONT.outfitStatus.values);
+}
+
+/* ---------- prendas ---------- */
+function renderGarments() {
+  const fc = $("#f-category").value, fa = $("#f-area").value, fs = $("#f-season").value;
+  const items = LIB.filter(g => (!fc || g.category === fc) && (!fa || (g.bodyArea || g.part) === fa) && (!fs || (g.season || []).includes(fs)));
+  $("#garment-grid").innerHTML = items.map(g => `
+    <article class="card" data-garment="${g.id}">
+      <img src="${imgUrl(g)}" alt="" loading="lazy" />
+      <div class="body">
+        <span class="name">${g.name}</span>
+        <div class="chips">
+          <span class="chip">${catLabel(g.category)}</span>
+          <span class="chip">${areaLabel(g.bodyArea || g.part)}</span>
+          ${g.material ? `<span class="chip">${g.material}</span>` : ""}
+        </div>
+      </div>
+    </article>`).join("") || `<p class="muted">Sin prendas para estos filtros.</p>`;
+}
+["f-category", "f-area", "f-season"].forEach(id => $("#" + id).addEventListener("change", renderGarments));
+
+function prov(g, field) {
+  const p = g.fieldProvenance?.[field] || "unknown";
+  return `<span class="prov ${p}" title="${p}"></span>`;
+}
+function selField(g, field, values, labels) {
+  return `<label>${field}${prov(g, field)}<select name="${field}">
+    <option value="">— desconocido —</option>
+    ${values.map(v => `<option value="${v}" ${g[field] === v ? "selected" : ""}>${labels?.[v] || v}</option>`).join("")}
+  </select></label>`;
+}
+function checksField(g, field, values) {
+  const cur = g[field] || [];
+  return `<label>${field}${prov(g, field)}</label><div class="checks">
+    ${values.map(v => `<label><input type="checkbox" name="${field}" value="${v}" ${cur.includes(v) ? "checked" : ""}/>${v}</label>`).join("")}
+  </div>`;
+}
+function openGarment(id) {
+  const g = byId(id);
+  $("#dlg").innerHTML = `<div class="sheet">
+    <div class="visual">
+      <img src="${imgUrl(g)}" alt="" />
+      ${g.modeledImage ? `<img src="${g.modeledImage}" alt="editorial" />` : ""}
+      <p class="muted">Fuente: ${g.source?.provider || "wardrobe"} · ${g.source?.model || ""}<br/>
+      Revisión: ${g.review?.status || "—"} (${g.review?.by || ""})</p>
+    </div>
+    <form id="gform">
+      <div class="sheet-head"><h2>${g.name}</h2><button type="button" class="btn ghost" id="dlg-close">Cerrar</button></div>
+      <label>name${prov(g, "name")}<input type="text" name="name" value="${g.name}" /></label>
+      <label>description${prov(g, "description")}<textarea name="description" rows="2">${g.description || ""}</textarea></label>
+      <div class="row3">
+        ${selField(g, "category", ONT.category.values, ONT.category.labels)}
+        <label>subcategory${prov(g, "subcategory")}<select name="subcategory"><option value="">— desconocido —</option></select></label>
+        ${selField(g, "garmentType", ONT.garmentType.values)}
+      </div>
+      <div class="row3">
+        <label>bodyArea${prov(g, "part")}<select name="bodyArea">
+          ${ONT.bodyArea.values.map(v => `<option value="${v}" ${(g.bodyArea || g.part) === v ? "selected" : ""}>${ONT.bodyArea.labels[v]}</option>`).join("")}
+        </select></label>
+        ${selField(g, "material", ONT.material.values)}
+        ${selField(g, "pattern", ONT.pattern.values)}
+      </div>
+      <div class="row3">
+        ${selField(g, "silhouette", ONT.silhouette.values)}
+        ${selField(g, "fit", ONT.fit.values)}
+        ${selField(g, "style", ONT.style.values)}
+      </div>
+      ${checksField(g, "season", ONT.season.values)}
+      ${checksField(g, "occasion", ONT.occasion.values)}
+      <div class="row3">
+        <label>thermalWeight${prov(g, "thermalWeight")}<select name="thermalWeight">
+          <option value="">—</option>${ONT.thermalWeight.values.map(v => `<option ${g.thermalWeight === v ? "selected" : ""}>${v}</option>`).join("")}
+        </select></label>
+        <label>price<input type="number" name="price" min="0" step="0.01" value="${g.price ?? ""}" /></label>
+        <label>tags<input type="text" name="tags" value="${(g.tags || []).join(", ")}" /></label>
+      </div>
+      <button class="btn" type="submit">Guardar (confirma como humano)</button>
+    </form></div>`;
+  const subSel = $("#dlg select[name=subcategory]");
+  const fillSub = cat => { subSel.innerHTML = `<option value="">— desconocido —</option>` +
+    (ONT.subcategoryByCategory[cat] || []).map(v => `<option ${g.subcategory === v ? "selected" : ""}>${v}</option>`).join(""); };
+  fillSub(g.category);
+  $("#dlg select[name=category]").addEventListener("change", e => fillSub(e.target.value));
+  $("#gform").addEventListener("submit", async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const payload = {};
+    for (const k of ["name", "description", "category", "subcategory", "garmentType", "bodyArea", "material", "pattern", "silhouette", "fit", "style", "thermalWeight", "price", "tags"]) {
+      let v = fd.get(k);
+      if (k === "thermalWeight" || k === "price") v = v === "" ? null : Number(v);
+      if (k === "tags") v = String(v).split(",").map(s => s.trim()).filter(Boolean);
+      payload[k] = v === "" ? null : v;
+    }
+    for (const k of ["season", "occasion"]) payload[k] = fd.getAll(k);
+    try {
+      const updated = await api(`/api/studio/garments/${g.id}`, { method: "PATCH", body: JSON.stringify(payload) });
+      LIB = LIB.map(x => x.id === g.id ? updated : x);
+      renderGarments(); $("#dlg").close(); toast("Prenda guardada y confirmada");
+    } catch (err) { toast("⚠ " + err.message); }
+  });
+  $("#dlg").showModal();
+  $("#dlg-close").onclick = () => $("#dlg").close();
+}
+
+/* ---------- outfits ---------- */
+function renderOutfits() {
+  const fs = $("#f-status").value;
+  const items = OUTFITS.filter(o => !fs || o.status === fs);
+  $("#outfit-grid").innerHTML = items.map(o => `
+    <article class="card" data-outfit="${o.id}">
+      ${o.image ? `<img src="/api/import/outfits/${o.image.split("/").pop()}" alt="" loading="lazy" />` : `<div style="aspect-ratio:1;display:grid;place-items:center;color:var(--muted)">sin imagen</div>`}
+      <div class="body">
+        <span class="name">${o.name}</span>
+        <div class="chips"><span class="badge ${o.status}">${o.status}</span>
+        <span class="chip">${o.garmentIds.length} prendas</span><span class="chip">${o.source || ""}</span></div>
+      </div>
+    </article>`).join("") || `<p class="muted">Sin outfits con este estado.</p>`;
+}
+$("#f-status").addEventListener("change", renderOutfits);
+
+function garmentPicker(selected) {
+  const groups = {};
+  LIB.forEach(g => { const a = g.bodyArea || g.part; (groups[a] ||= []).push(g); });
+  return Object.entries(groups).map(([area, gs]) => `
+    <div><span class="muted">${areaLabel(area)}</span>
+    <div class="glist">${gs.map(g => `
+      <label class="g"><input type="checkbox" name="garmentIds" value="${g.id}" ${selected.includes(g.id) ? "checked" : ""}/>
+        <img src="${imgUrl(g)}" alt="" /><span>${g.name}</span><span class="cat">${catLabel(g.category)}</span></label>`).join("")}
+    </div></div>`).join("");
+}
+
+function openOutfit(id) {
+  const o = OUTFITS.find(x => x.id === id);
+  $("#dlg").innerHTML = `<div class="sheet">
+    <div class="visual">
+      ${o.image ? `<img src="/api/import/outfits/${o.image.split("/").pop()}" alt="editorial" />` : "<p class='muted'>Sin imagen editorial</p>"}
+      ${o.flatLayImage ? `<img src="/api/import/outfits/${o.flatLayImage.split("/").pop()}" alt="flat lay" />` : ""}
+      <label class="btn ghost" style="text-align:center">Subir imagen<input type="file" id="asset-file" accept="image/png" hidden /></label>
+      <select id="asset-kind"><option value="editorial">editorial</option><option value="flatlay">flat lay</option></select>
+      <p class="muted">Fuente: ${o.source || "—"} · ${new Date(o.createdAt || Date.now()).toLocaleDateString("es-ES")}<br/>
+      Historial: ${(o.history || []).map(h => h.event).join(" → ") || "—"}</p>
+    </div>
+    <form id="oform">
+      <div class="sheet-head"><h2>${o.name}</h2><span class="badge ${o.status}">${o.status}</span>
+        <button type="button" class="btn ghost" id="dlg-close">Cerrar</button></div>
+      <label>name<input type="text" name="name" value="${o.name}" /></label>
+      <label>description<textarea name="description" rows="2">${o.description || ""}</textarea></label>
+      <label>Prendas del outfit (slots por categoría; el servidor rechaza conflictos y referencias rotas)</label>
+      ${garmentPicker(o.garmentIds)}
+      <div class="row2">
+        <label>occasion<input type="text" name="occasion" value="${(o.occasion || []).join(", ")}" /></label>
+        <label>season<input type="text" name="season" value="${(o.season || []).join(", ")}" /></label>
+      </div>
+      <div class="checks">
+        <button class="btn" type="submit">Guardar cambios</button>
+        <button class="btn ok" type="button" data-review="approve">Aprobar</button>
+        <button class="btn bad" type="button" data-review="reject">Rechazar</button>
+        <button class="btn ghost" type="button" data-review="draft">A borrador</button>
+        <button class="btn ghost" type="button" data-review="publish" ${o.status !== "approved" ? "disabled" : ""}>Publicar</button>
+        <button class="btn ghost" type="button" id="btn-del">Eliminar</button>
+      </div>
+      <p class="muted">Solo los outfits aprobados/publicados se exportan a MIRRORA. Editar un outfit aprobado lo devuelve a revisión.</p>
+    </form></div>`;
+  $("#dlg").showModal();
+  $("#dlg-close").onclick = () => $("#dlg").close();
+  $("#oform").addEventListener("submit", async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const payload = {
+      name: fd.get("name"), description: fd.get("description"),
+      garmentIds: fd.getAll("garmentIds"),
+      occasion: String(fd.get("occasion")).split(",").map(s => s.trim()).filter(Boolean),
+      season: String(fd.get("season")).split(",").map(s => s.trim()).filter(Boolean)
+    };
+    try {
+      const updated = await api(`/api/studio/outfits/${o.id}`, { method: "PATCH", body: JSON.stringify(payload) });
+      OUTFITS = OUTFITS.map(x => x.id === o.id ? updated : x);
+      renderOutfits(); $("#dlg").close(); toast("Outfit guardado");
+    } catch (err) { toast("⚠ " + err.message); }
+  });
+  document.querySelectorAll("[data-review]").forEach(b => b.addEventListener("click", async () => {
+    try {
+      const updated = await api(`/api/studio/outfits/${o.id}/review`, { method: "POST", body: JSON.stringify({ action: b.dataset.review }) });
+      OUTFITS = OUTFITS.map(x => x.id === o.id ? updated : x);
+      renderOutfits(); $("#dlg").close(); toast(`Outfit → ${updated.status}`);
+    } catch (err) { toast("⚠ " + err.message); }
+  }));
+  $("#btn-del").addEventListener("click", async () => {
+    if (!confirm(`¿Eliminar ${o.name}?`)) return;
+    await api(`/api/studio/outfits/${o.id}`, { method: "DELETE" });
+    OUTFITS = OUTFITS.filter(x => x.id !== o.id);
+    renderOutfits(); $("#dlg").close(); toast("Outfit eliminado");
+  });
+  $("#asset-file").addEventListener("change", async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const b64 = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(file); });
+    try {
+      const updated = await api(`/api/studio/outfits/${o.id}/asset`, { method: "POST", body: JSON.stringify({ imageBase64: b64, kind: $("#asset-kind").value }) });
+      OUTFITS = OUTFITS.map(x => x.id === o.id ? updated : x);
+      renderOutfits(); $("#dlg").close(); toast("Asset asociado al outfit");
+    } catch (err) { toast("⚠ " + err.message); }
+  });
+}
+
+$("#btn-new").addEventListener("click", () => {
+  $("#dlg").innerHTML = `<form class="detail" id="nform">
+    <div class="sheet-head"><h2>Nuevo outfit</h2><button type="button" class="btn ghost" id="dlg-close">Cerrar</button></div>
+    <div class="row2">
+      <label>id (slug)<input type="text" name="id" placeholder="mi-outfit" required /></label>
+      <label>name<input type="text" name="name" required /></label>
+    </div>
+    <label>description<textarea name="description" rows="2"></textarea></label>
+    ${garmentPicker([])}
+    <button class="btn" type="submit">Crear borrador</button>
+  </form>`;
+  $("#dlg").showModal();
+  $("#dlg-close").onclick = () => $("#dlg").close();
+  $("#nform").addEventListener("submit", async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    try {
+      await api("/api/studio/outfits", { method: "POST", body: JSON.stringify({
+        id: fd.get("id"), name: fd.get("name"), description: fd.get("description"),
+        garmentIds: fd.getAll("garmentIds"), source: "manual"
+      })});
+      OUTFITS = (await api("/api/studio/outfits")).outfits;
+      renderOutfits(); $("#dlg").close(); toast("Outfit creado en borrador");
+    } catch (err) { toast("⚠ " + err.message); }
+  });
+});
+
+$("#btn-import").addEventListener("click", () => {
+  $("#dlg").innerHTML = `<form class="detail" id="iform">
+    <div class="sheet-head"><h2>Importar manifest</h2><button type="button" class="btn ghost" id="dlg-close">Cerrar</button></div>
+    <p class="muted">Pega un manifest JSON (formato de la skill generate-outfits o {"outfits":[…]}). Las prendas deben existir en la biblioteca.</p>
+    <textarea name="json" rows="12" spellcheck="false" style="font-family:Consolas,monospace;font-size:.8rem"></textarea>
+    <button class="btn" type="submit">Importar como borradores</button>
+  </form>`;
+  $("#dlg").showModal();
+  $("#dlg-close").onclick = () => $("#dlg").close();
+  $("#iform").addEventListener("submit", async e => {
+    e.preventDefault();
+    try {
+      const parsed = JSON.parse(new FormData(e.target).get("json"));
+      const manifest = { outfits: (parsed.outfits || [parsed]).map(o => ({ ...o, status: "draft", source: "manifest-import" })) };
+      const r = await api("/api/studio/outfits", { method: "POST", body: JSON.stringify(manifest) });
+      OUTFITS = (await api("/api/studio/outfits")).outfits;
+      renderOutfits(); $("#dlg").close(); toast(`Importados: ${r.created.join(", ")}`);
+    } catch (err) { toast("⚠ " + err.message); }
+  });
+});
+
+/* ---------- navegación ---------- */
+document.querySelectorAll(".tab[data-tab]").forEach(t => t.addEventListener("click", () => {
+  document.querySelectorAll(".tab[data-tab]").forEach(x => x.classList.toggle("on", x === t));
+  $("#view-garments").hidden = t.dataset.tab !== "garments";
+  $("#view-outfits").hidden = t.dataset.tab !== "outfits";
+}));
+document.addEventListener("click", e => {
+  const g = e.target.closest("[data-garment]");
+  if (g) openGarment(g.dataset.garment);
+  const o = e.target.closest("[data-outfit]");
+  if (o && !e.target.closest("input,select,button,label")) openOutfit(o.dataset.outfit);
+});
+
+loadAll().catch(err => toast("⚠ " + err.message));
+</script>
+</body>
+</html>

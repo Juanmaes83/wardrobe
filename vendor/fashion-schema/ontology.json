@@ -1,0 +1,270 @@
+{
+  "$id": "https://fashion-studio-sol.dev/schemas/ontology/v1",
+  "version": "1.1.0",
+  "description": "Ontología V1 de Fashion Studio SOL. Contrato canónico: las copias en wardrobe/public y en catálogos exportados se generan desde este archivo. Progresiva y extensible: los vocabularios pueden crecer, nunca reinterpretarse.",
+  "provenance": [
+    "unknown",
+    "not_applicable",
+    "ai_inferred",
+    "human_confirmed"
+  ],
+  "bodyArea": {
+    "description": "Slot funcional del look. Compatible con `part` histórico de wardrobe.",
+    "values": [
+      "upperbody",
+      "wholebody_up",
+      "lowerbody",
+      "shoes",
+      "accessories_up"
+    ],
+    "labels": {
+      "upperbody": "Parte superior",
+      "wholebody_up": "Capa exterior",
+      "lowerbody": "Parte inferior",
+      "shoes": "Calzado",
+      "accessories_up": "Accesorio"
+    }
+  },
+  "category": {
+    "values": [
+      "tops",
+      "knitwear",
+      "outerwear",
+      "tailoring",
+      "bottoms",
+      "denim",
+      "dresses",
+      "footwear",
+      "bags",
+      "accessories"
+    ],
+    "labels": {
+      "tops": "Camisas y tops",
+      "knitwear": "Punto",
+      "outerwear": "Abrigo y capas",
+      "tailoring": "Sastrería",
+      "bottoms": "Pantalones",
+      "denim": "Denim",
+      "dresses": "Vestidos",
+      "footwear": "Calzado",
+      "bags": "Bolsos",
+      "accessories": "Accesorios"
+    }
+  },
+  "garmentType": {
+    "description": "Tipo concreto dentro de la categoría. Subconjunto V1; ampliable.",
+    "values": [
+      "shirt",
+      "blouse",
+      "t-shirt",
+      "tank-top",
+      "sweater",
+      "cardigan",
+      "hoodie",
+      "blazer",
+      "jacket",
+      "coat",
+      "trench",
+      "trousers",
+      "jeans",
+      "shorts",
+      "skirt",
+      "dress",
+      "sneakers",
+      "boots",
+      "loafers",
+      "heels",
+      "sandals",
+      "tote",
+      "crossbody",
+      "clutch",
+      "belt",
+      "scarf",
+      "sunglasses"
+    ]
+  },
+  "subcategoryByCategory": {
+    "tops": [
+      "dress-shirt",
+      "casual-shirt",
+      "blouse",
+      "t-shirt",
+      "tank"
+    ],
+    "knitwear": [
+      "crewneck",
+      "v-neck",
+      "turtleneck",
+      "cardigan"
+    ],
+    "outerwear": [
+      "blazer",
+      "jacket",
+      "coat",
+      "trench",
+      "puffer"
+    ],
+    "tailoring": [
+      "suit-trousers",
+      "suit-jacket",
+      "waistcoat"
+    ],
+    "bottoms": [
+      "tailored-trousers",
+      "chinos",
+      "wide-leg",
+      "shorts",
+      "skirt"
+    ],
+    "denim": [
+      "straight",
+      "slim",
+      "wide",
+      "jacket"
+    ],
+    "dresses": [
+      "slip",
+      "shirt-dress",
+      "knit-dress",
+      "evening"
+    ],
+    "footwear": [
+      "low-top-sneaker",
+      "high-top-sneaker",
+      "boot",
+      "loafer",
+      "heel",
+      "sandal"
+    ],
+    "bags": [
+      "tote",
+      "crossbody",
+      "clutch",
+      "bucket",
+      "shopper"
+    ],
+    "accessories": [
+      "belt",
+      "scarf",
+      "sunglasses",
+      "jewellery",
+      "hat"
+    ]
+  },
+  "material": {
+    "values": [
+      "cotton",
+      "poplin",
+      "oxford",
+      "linen",
+      "wool",
+      "merino",
+      "cashmere",
+      "denim",
+      "leather",
+      "suede",
+      "silk",
+      "viscose",
+      "polyester",
+      "nylon",
+      "canvas",
+      "knit-blend",
+      "mixed"
+    ]
+  },
+  "pattern": {
+    "values": [
+      "solid",
+      "striped",
+      "checked",
+      "herringbone",
+      "floral",
+      "graphic",
+      "melange"
+    ]
+  },
+  "silhouette": {
+    "values": [
+      "fitted",
+      "straight",
+      "relaxed",
+      "oversized",
+      "a-line",
+      "wide-leg",
+      "tapered",
+      "boxy"
+    ]
+  },
+  "fit": {
+    "values": [
+      "slim",
+      "regular",
+      "relaxed",
+      "oversized"
+    ]
+  },
+  "season": {
+    "values": [
+      "spring",
+      "summer",
+      "autumn",
+      "winter",
+      "all-season"
+    ]
+  },
+  "style": {
+    "values": [
+      "minimal",
+      "smart-casual",
+      "tailored",
+      "casual",
+      "street",
+      "boho",
+      "evening",
+      "sport"
+    ]
+  },
+  "occasion": {
+    "values": [
+      "office",
+      "casual",
+      "smart-casual",
+      "weekend",
+      "evening",
+      "event",
+      "travel",
+      "sport"
+    ]
+  },
+  "thermalWeight": {
+    "description": "Peso térmico 1 (muy ligero) a 5 (abrigo fuerte). Base para la futura inteligencia meteorológica.",
+    "values": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
+  },
+  "outfitStatus": {
+    "values": [
+      "draft",
+      "review",
+      "approved",
+      "rejected",
+      "published"
+    ]
+  },
+  "outfitPublishable": [
+    "approved",
+    "published"
+  ],
+  "reviewStatus": {
+    "values": [
+      "pending",
+      "approved",
+      "rejected"
+    ]
+  },
+  "_generatedFrom": "Fashion-Studio-SOL/packages/fashion-schema — NO EDITAR A MANO"
+}
