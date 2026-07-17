@@ -1,0 +1,24 @@
+name: Studio CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      # La Studio API y los scripts del pipeline deben ser sintácticamente válidos.
+      - name: node --check de scripts del Studio y pipeline
+        run: |
+          for f in scripts/studio-api.mjs scripts/import-job-api.mjs scripts/responsive-image-api.mjs vite.config.mjs; do
+            echo "check $f" && node --check "$f"
+          done
+      - name: La ontología servida es JSON válido y versionada
+        run: node -e "const o=require('./public/ontology.json'); if(!o.version) throw new Error('sin version'); console.log('ontologia', o.version)"

@@ -1,6 +1,6 @@
 {
   "$id": "https://fashion-studio-sol.dev/schemas/ontology/v1",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Ontología V1 de Fashion Studio SOL. Contrato canónico: las copias en wardrobe/public y en catálogos exportados se generan desde este archivo. Progresiva y extensible: los vocabularios pueden crecer, nunca reinterpretarse.",
   "provenance": [
     "unknown",
@@ -228,6 +228,7 @@
     "values": [
       "office",
       "casual",
+      "smart-casual",
       "weekend",
       "evening",
       "event",
