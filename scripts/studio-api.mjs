@@ -14,11 +14,16 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
+// Contrato canónico VENDORIZADO desde Fashion-Studio-SOL (tools/sync-ontology.mjs).
+// Wardrobe usa el MISMO validador y la MISMA máquina de estados: ninguna regla se
+// reimplementa aquí, así que no puede divergir de la fuente.
+import {
+  ONTOLOGY as VENDOR_ONT, validateOutfit as validateOutfitCanonical,
+  sanitizeNewOutfitStatus, reviewTransition
+} from "../vendor/fashion-schema/validate.mjs";
 
-const OUTFIT_STATUSES = ["draft", "review", "approved", "rejected", "published"];
-const AREAS = ["upperbody", "wholebody_up", "lowerbody", "shoes", "accessories_up"];
 const HEX = /^#[0-9a-f]{6}$/i;
-const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const AREAS = VENDOR_ONT.bodyArea.values;
 
 // Campos de prenda editables desde el Studio (Ontología V1)
 const GARMENT_FIELDS = ["name", "description", "part", "bodyArea", "category", "subcategory", "garmentType", "color", "secondaryColor", "material", "pattern", "silhouette", "fit", "season", "style", "occasion", "thermalWeight", "tags", "price", "currency", "sizes", "productUrl", "brand", "collection", "sku"];
@@ -29,7 +34,7 @@ export function studioApi() {
   const libFile = path.join(dataDir, "library.json");
   const outfitsFile = path.join(dataDir, "outfits.json");
   const outfitImagesDir = path.join(dataDir, "outfit-images");
-  const ontologyFile = path.join(root, "public", "ontology.json");
+  const ontologyFile = path.join(root, "vendor", "fashion-schema", "ontology.json");
 
   const readJson = async (file, fallback) => {
     try { return JSON.parse(await readFile(file, "utf8")); }
@@ -55,27 +60,8 @@ export function studioApi() {
 
   async function ontology() { return readJson(ontologyFile, null); }
 
-  function validateOutfit(o, garmentsById, ont) {
-    const errors = [];
-    if (!SLUG.test(o.id || "")) errors.push("id inválido (slug minúsculas-guiones)");
-    if (!o.name?.trim()) errors.push("falta name");
-    if (!Array.isArray(o.garmentIds) || !o.garmentIds.length) errors.push("garmentIds vacío");
-    if (o.status && !OUTFIT_STATUSES.includes(o.status)) errors.push(`status inválido: ${o.status}`);
-    const seen = new Map();
-    for (const id of o.garmentIds || []) {
-      const g = garmentsById[id];
-      if (!g) { errors.push(`prenda inexistente: ${id}`); continue; }
-      const area = g.bodyArea || g.part;
-      if (area !== "accessories_up") {
-        if (seen.has(area)) errors.push(`conflicto de slot ${area}: ${seen.get(area)} y ${id}`);
-        seen.set(area, id);
-      }
-    }
-    for (const f of ["occasion", "season"]) {
-      (o[f] || []).forEach(v => { if (ont && !ont[f].values.includes(v)) errors.push(`${f} fuera de vocabulario: ${v}`); });
-    }
-    return errors;
-  }
+  // Validación de outfit = validador canónico vendorizado (misma semántica exacta).
+  const validateOutfit = (o, garmentsById) => validateOutfitCanonical(o, garmentsById).errors;
 
   return {
     name: "studio-api",
@@ -157,12 +143,14 @@ export function studioApi() {
                 garmentIds: raw.garmentIds || [], occasion: raw.occasion || [], season: raw.season || [],
                 style: raw.style || null, tags: raw.tags || [],
                 image: raw.image || null, flatLayImage: raw.flatLayImage || null,
-                status: OUTFIT_STATUSES.includes(raw.status) ? raw.status : "draft",
+                // Anti-bypass: crear/importar SIEMPRE nace en draft, ignorando el
+                // status entrante. Publicar exige pasar por el workflow de revisión.
+                status: sanitizeNewOutfitStatus(raw.status),
                 source: raw.source || (Array.isArray(input.outfits) ? "manifest-import" : "manual"),
                 createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
                 history: [{ at: new Date().toISOString(), event: "created", via: raw.source || "studio" }]
               };
-              const errors = validateOutfit(o, byId, ont);
+              const errors = validateOutfit(o, byId);
               if (data.outfits.some(x => x.id === o.id)) errors.push(`id duplicado: ${o.id}`);
               if (errors.length) return json(res, 400, { id: o.id, errors });
               created.push(o);
@@ -191,7 +179,7 @@ export function studioApi() {
             for (const k of ["name", "description", "garmentIds", "occasion", "season", "style", "tags", "image", "flatLayImage"]) {
               if (input[k] !== undefined) next[k] = input[k];
             }
-            const errors = validateOutfit(next, await garmentsById(), await ontology());
+            const errors = validateOutfit(next, await garmentsById());
             if (errors.length) return json(res, 400, { errors });
             next.updatedAt = new Date().toISOString();
             next.status = ["approved", "published"].includes(outfit.status) ? "review" : outfit.status; // editar un aprobado lo devuelve a revisión
@@ -202,12 +190,12 @@ export function studioApi() {
           }
           if (action === "review" && req.method === "POST") {
             const { action: verb, note } = await body(req);
-            const map = { approve: "approved", reject: "rejected", draft: "draft", publish: "published" };
-            if (!map[verb]) return json(res, 400, { error: "action debe ser approve|reject|draft|publish" });
-            if (verb === "publish" && outfit.status !== "approved") return json(res, 409, { error: "solo se publica un outfit aprobado" });
-            outfit.status = map[verb];
+            // Única vía de cambio de estado: máquina de estados canónica vendorizada.
+            const t = reviewTransition(outfit.status, verb);
+            if (!t.ok) return json(res, 409, { error: t.error });
+            outfit.status = t.status;
             outfit.updatedAt = new Date().toISOString();
-            outfit.history = [...(outfit.history || []), { at: outfit.updatedAt, event: map[verb], note: note || null }];
+            outfit.history = [...(outfit.history || []), { at: outfit.updatedAt, event: t.status, note: note || null }];
             data.outfits[idx] = outfit;
             await atomic(outfitsFile, data);
             return json(res, 200, outfit);

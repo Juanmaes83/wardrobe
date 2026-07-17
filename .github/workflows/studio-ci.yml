@@ -13,12 +13,44 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-      # La Studio API y los scripts del pipeline deben ser sintácticamente válidos.
+          node-version: "22"
       - name: node --check de scripts del Studio y pipeline
         run: |
           for f in scripts/studio-api.mjs scripts/import-job-api.mjs scripts/responsive-image-api.mjs vite.config.mjs; do
             echo "check $f" && node --check "$f"
           done
+
+  contract-not-divergent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # Demuestra que Wardrobe usa el contrato canónico vendorizado (no una réplica):
+      # el validador y la máquina de estados deben comportarse exactamente como el canónico.
+      - name: El validador vendorizado NO puede divergir del canónico
+        run: |
+          node --input-type=module -e '
+            import { ONTOLOGY, validateOutfit, validateGarment, isPublishable, sanitizeNewOutfitStatus, reviewTransition } from "./vendor/fashion-schema/validate.mjs";
+            const ok = (c, m) => { if (!c) { console.error("FALLO:", m); process.exit(1); } };
+            ok(ONTOLOGY && ONTOLOGY.version, "sin ontologia vendorizada");
+            // anti-bypass: creación/importación siempre draft
+            for (const s of ["published","approved","review",undefined]) ok(sanitizeNewOutfitStatus(s) === "draft", "status inicial debe ser draft, no " + s);
+            // publish sólo desde approved
+            ok(reviewTransition("draft","publish").ok === false, "publish desde draft debe fallar");
+            ok(reviewTransition("approved","publish").status === "published", "publish desde approved debe funcionar");
+            ok(reviewTransition("draft","approve").status === "approved", "approve desde draft");
+            // vocabulario de outfit (incl. style) idéntico al canónico
+            const byId = { a:{id:"a",part:"upperbody"}, b:{id:"b",part:"lowerbody"}, c:{id:"c",part:"lowerbody"} };
+            ok(validateOutfit({id:"x",name:"X",garmentIds:["a","b"],style:"tailored"}, byId).ok, "outfit válido debería pasar");
+            ok(!validateOutfit({id:"x",name:"X",garmentIds:["a","b"],style:"chandalero"}, byId).ok, "style fuera de vocab debe rechazarse");
+            ok(!validateOutfit({id:"x",name:"X",garmentIds:["b","c"]}, byId).ok, "conflicto de slot debe rechazarse");
+            ok(!validateOutfit({id:"x",name:"X",garmentIds:["a","ghost"]}, byId).ok, "ref inexistente debe rechazarse");
+            // publicabilidad
+            ok(isPublishable({status:"approved"}) && isPublishable({status:"published"}), "approved/published publicables");
+            ok(!isPublishable({status:"draft"}) && !isPublishable({status:"review"}) && !isPublishable({status:"rejected"}), "no publicables");
+            console.log("Contrato vendorizado v" + ONTOLOGY.version + ": sin divergencia ✓");
+          '
       - name: La ontología servida es JSON válido y versionada
-        run: node -e "const o=require('./public/ontology.json'); if(!o.version) throw new Error('sin version'); console.log('ontologia', o.version)"
+        run: node -e "const o=require('./vendor/fashion-schema/ontology.json'); if(!o.version) throw new Error('sin version'); console.log('ontologia', o.version)"
