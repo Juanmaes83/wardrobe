@@ -1,8 +1,30 @@
 import { useEffect, useMemo, useState } from "react";
 import "./platform.css";
 
-const PROJECT_ID = import.meta.env.VITE_PLATFORM_PROJECT_ID || "project-sol";
-const API = "/platform-api";
+function resolveApiBase(raw) {
+  const fallback = "/platform-api";
+  if (!raw) return { base: fallback, warning: null };
+  let url;
+  try {
+    url = new URL(raw, location.href);
+  } catch {
+    return { base: fallback, warning: `?api= inválido ("${raw}"); usando ${fallback}.` };
+  }
+  const isLoopback = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+  const isHttps = url.protocol === "https:";
+  if (!isLoopback && !isHttps) {
+    return {
+      base: fallback,
+      warning: `?api= rechazado ("${raw}"): solo se admite localhost, 127.0.0.1 o HTTPS; usando ${fallback}.`,
+    };
+  }
+  return { base: raw.replace(/\/$/, ""), warning: null };
+}
+
+const params = new URLSearchParams(location.search);
+const PROJECT_ID = encodeURIComponent(params.get("project") || import.meta.env.VITE_PLATFORM_PROJECT_ID || "project-sol");
+const { base: API, warning: API_WARNING } = resolveApiBase(params.get("api"));
+if (API_WARNING) console.warn(`Fashion Studio SOL: ${API_WARNING}`);
 
 function authHeaders(token, extra = {}) {
   return {
@@ -24,6 +46,7 @@ export function PlatformApp() {
   const [token, setToken] = useState(() => sessionStorage.getItem("fashion-admin-token") || "");
   const [snapshot, setSnapshot] = useState(null);
   const [error, setError] = useState("");
+  const [apiWarning] = useState(API_WARNING);
   const [busy, setBusy] = useState(false);
   const [active, setActive] = useState("garments");
   const [showToken, setShowToken] = useState(false);
@@ -131,6 +154,7 @@ export function PlatformApp() {
             />
           )}
           <button onClick={load} disabled={busy}>{busy ? "Conectando…" : "Reintentar conexión"}</button>
+          {apiWarning && <p className="platform-error">{apiWarning}</p>}
           {error && <p className="platform-error">{error}</p>}
         </section>
       </main>
@@ -154,6 +178,7 @@ export function PlatformApp() {
         ))}
       </nav>
 
+      {apiWarning && <p className="platform-error">{apiWarning}</p>}
       {error && <p className="platform-error">{error}</p>}
 
       {active === "garments" && (
