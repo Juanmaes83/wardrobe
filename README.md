@@ -66,6 +66,62 @@ If you are setting up Wardrobe for a user, ask how they want to import their clo
 | `WARDROBE_MODEL_REFERENCE` | `data/model-reference.png` |
 | `WARDROBE_DATA_DIR` | `data` |
 
+## Fashion Studio SOL Platform Mode
+
+The local mode described above (`npm run dev`, `data/library.json`, the import/outfit skills) is untouched and remains the default when you open [localhost:5173](http://localhost:5173) normally.
+
+There is also a **platform mode** that connects this same app to the shared [Fashion Studio SOL](https://github.com/Juanmaes83/Fashion-Studio-SOL) persistence layer instead of the local JSON database:
+
+```
+http://localhost:5173/?platform=1
+```
+
+### What it connects to
+
+- Platform mode talks to the **Fashion Studio SOL API** (`services/platform-api`), which persists everything in PostgreSQL rather than `data/`.
+- It requires that API running locally and reachable, configured with:
+
+  ```bash
+  PLATFORM_API_URL=http://127.0.0.1:8787
+  ```
+
+  This is read by `vite.config.js` and proxied dev-side through `/platform-api`; it is **not** exposed to the client bundle.
+- On load it asks for the Fashion Studio SOL admin API token (stored only in `sessionStorage`) if the API requires one.
+
+### Production override (`?api=` / `?project=`)
+
+`PLATFORM_API_URL` only configures the **Vite dev server proxy** — it has no effect on `vite build`/`vite preview` or on a static production deploy, since there is no dev server to proxy through. For those cases, platform mode reads the API URL and project from the page's own query string instead:
+
+```
+https://<your-deployed-wardrobe>/?platform=1&api=https://<platform-api-url>&project=sol-store
+```
+
+- In local dev, `?platform=1` alone keeps working exactly as before, resolving through `/platform-api` via the Vite proxy.
+- `?project=` overrides which project is loaded (defaults to `project-sol` / `VITE_PLATFORM_PROJECT_ID` when omitted).
+- `?api=` is validated before use, not trusted blindly:
+  - accepted: `localhost`, `127.0.0.1` (any scheme).
+  - accepted: any `https://` domain.
+  - rejected: anything else (malformed URLs, or a non-loopback `http://` origin) — the app falls back to `/platform-api` and shows a warning (both in the UI and via `console.warn`) instead of using it.
+- **Why:** this app asks for and stores an admin `Bearer` token to talk to the platform API. Without this check, a crafted link with `?api=https://attacker.example` could make the app send that token to an untrusted origin. The validation ensures the token only ever reaches `/platform-api`, a loopback address, or an explicit HTTPS endpoint.
+
+`PLATFORM_API_URL` remains the right way to configure the dev proxy; it is not, by itself, the production configuration mechanism — use `?api=` for that.
+
+### What you get in this mode
+
+- **Prendas** (garments), **Outfits** and their assets are read live from the API/PostgreSQL — not from `data/library.json`.
+- A **Trabajos** (jobs) tab shows each generation job's status, attempt count and live progress bar.
+- Each outfit has a **Generar editorial** action that queues a `generate_outfit_editorial` job against the platform — editorial generation is wired to the platform's job queue and OpenAI-backed workers, not to the local import pipeline.
+
+### Dependency
+
+Platform mode has no backend of its own: it depends functionally on **Fashion-Studio-SOL PR #3** (`phase-2/persistence-foundation`) being run locally alongside it. It will not work stand-alone.
+
+### Relationship to the local skills
+
+The `import-clothes` and `generate-outfits` Codex skills described above still exist and still work exactly as before, writing to `data/library.json` and `data/imported/`. They are the **local/agent flow** of this repo.
+
+Platform mode does not yet replace them: the heavy visual extraction they perform (garment detection with bounding boxes, cutout generation, review) has **not** been ported into Fashion Studio SOL's platform API. Platform mode currently covers reading persisted catalog data, tracking jobs, and queuing outfit-editorial generation — it is a client to the shared platform, not a reimplementation of the local extraction pipeline.
+
 ## License
 
 [MIT](LICENSE)
